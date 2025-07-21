@@ -50,8 +50,8 @@ function exibe($campo) {
             <tbody>
             <?php while($r = $result->fetch_assoc()): ?>
                 <tr>
-                    <td><?= date('d/m/Y H:i', strtotime($r['data_inicio'])) ?></td>
-                    <td><?= date('d/m/Y H:i', strtotime($r['data_fim'])) ?></td>
+                    <td><?= date('d/m/Y', strtotime($r['data_inicio'])) ?></td>
+                    <td><?= date('d/m/Y', strtotime($r['data_fim'])) ?></td>
                     <td><?= htmlspecialchars($r['responsavel']) ?></td>
                     <td>
                         <a href="?id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Detalhes</a>
@@ -81,8 +81,8 @@ if (isset($_GET['id'])):
         <div class="card-header text-center"><b style="font-size:1.4em;">Relatório de Plantão</b></div>
         <div class="card-body">
             <div class="row mb-2">
-                <div class="col-md-6"><b>Início:</b> <?= date('d/m/Y H:i', strtotime($detalhe['data_inicio'])) ?></div>
-                <div class="col-md-6"><b>Fim:</b> <?= date('d/m/Y H:i', strtotime($detalhe['data_fim'])) ?></div>
+                <div class="col-md-6"><b>Início:</b> <?= date('d/m/Y', strtotime($detalhe['data_inicio'])) ?></div>
+                <div class="col-md-6"><b>Fim:</b> <?= date('d/m/Y', strtotime($detalhe['data_fim'])) ?></div>
                 <div class="col-md-12"><b>Responsável:</b> <?= htmlspecialchars($detalhe['responsavel']) ?></div>
             </div>
             <hr>

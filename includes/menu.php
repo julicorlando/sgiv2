@@ -45,46 +45,50 @@ if (!isset($_SESSION['usuario_id'])) {
         <div class="collapse navbar-collapse" id="navbarSistema">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a href="index.php" class="nav-link">Inicio</a>
+                    <a href="index.php" class="nav-link">🏠 Início</a>
                 </li>
                 <!-- Inspeções Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="inspecoesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Operações
+                        🛠️ Operações
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="inspecoesDropdown">
-                        <li><a class="dropdown-item" href="pendencias.php">Pendências</a></li>
-                        <li><a class="dropdown-item" href="manutencao.php">Solicitação de Manutenção</a></li>
-                        <li><a class="dropdown-item" href="limpeza.php">Solicitação de Limpeza</a></li>
-                        <li><a class="dropdown-item" href="historico.php">Histórico de Serviços</a></li>
-                        <li><a class="dropdown-item" href="upload_pdf.php">Histórico CPRH</a></li>
+                        <li><a class="dropdown-item" href="pendencias.php">🕑 Pendências</a></li>
+                        <li><a class="dropdown-item" href="mapa.php">🌍 Mapa estratégico</a></li>
+                        <li><a class="dropdown-item" href="manutencao.php">🛠️ Solicitação de Manutenção</a></li>
+                        <li><a class="dropdown-item" href="limpeza.php">🧹 Solicitação de Limpeza</a></li>
+                        <li><a class="dropdown-item" href="historico.php">📋 Histórico de Serviços</a></li>
+                        <!--<li><a class="dropdown-item" href="historico_ponto.php">🌍 Histórico Mapa</a></li>-->
+                        <li><a class="dropdown-item" href="upload_pdf.php">📄 Histórico CPRH</a></li>
+                        <li><a class="dropdown-item" href="inventario.php">🏷️ Patrimônios</a></li>
                     </ul>
                 </li>
                 <!-- Relatórios-->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="relatoriosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Relatórios de plantão
+                        📝 Relatórios de Plantão
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="relatoriosDropdown">
-                        <li><a class="dropdown-item" href="plantao.php">Novo Relatório de plantão</a></li>
-                        <li><a class="dropdown-item" href="plantao_visualizar.php">Relatórios de Plantão</a></li>
+                        <li><a class="dropdown-item" href="plantao.php">🆕 Novo Relatório de Plantão</a></li>
+                        <li><a class="dropdown-item" href="plantao_visualizar.php">📚 Relatórios de Plantão</a></li>
                     </ul>
                 </li>
                 <!-- Chamados Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="chamadosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        T.i.
+                        💻 T.I.
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="chamadosDropdown">
-                        <li><a class="dropdown-item" href="ti.php">Novo chamado para o T.I.</a></li>
-                        <li><a class="dropdown-item" href="cadastrar_usuario.php">Cadastro de Usuário</a></li>
-                        <li><a class="dropdown-item" href="editar_senha.php">Alterar Senha</a></li>
+                        <li><a class="dropdown-item" href="ti.php">🆕 Novo chamado para o T.I.</a></li>
+                        <li><a class="dropdown-item" href="cadastrar_usuario.php">👤 Cadastro de Usuário</a></li>
+                        <li><a class="dropdown-item" href="editar_senha.php">🔒 Alterar Senha</a></li>
+                        <li><a class="dropdown-item" href="semanal_jogos.php">⚽ Agenda de jogos</a></li>
                     </ul>
                 </li>
                 <!-- Fluxo de Pessoas Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="fluxoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Fluxo de Pessoas
+                        🚶‍♂️ Fluxo de Pessoas
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="fluxoDropdown">
                         <li><a class="dropdown-item" href="fluxo.php">✅ Registrar Fluxo</a></li>
@@ -97,9 +101,9 @@ if (!isset($_SESSION['usuario_id'])) {
                 </li>
             </ul>
             <span class="navbar-text me-3">
-                Bem-vindo(a) <?= htmlspecialchars($_SESSION['usuario_nome']) ?>
+                👋 Bem-vindo(a) <?= htmlspecialchars($_SESSION['usuario_nome']) ?>
             </span>
-            <a href="logout.php" class="btn btn-outline-danger btn-sm">Sair</a>
+            <a href="logout.php" class="btn btn-outline-danger btn-sm">🚪 Sair</a>
         </div>
     </div>
 </nav>
