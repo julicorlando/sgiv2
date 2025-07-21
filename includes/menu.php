@@ -82,6 +82,7 @@ if (!isset($_SESSION['usuario_id'])) {
                         <li><a class="dropdown-item" href="ti.php">🆕 Novo chamado para o T.I.</a></li>
                         <li><a class="dropdown-item" href="cadastrar_usuario.php">👤 Cadastro de Usuário</a></li>
                         <li><a class="dropdown-item" href="editar_senha.php">🔒 Alterar Senha</a></li>
+                        <li><a class="dropdown-item" href="ti_chat.php">💬 Chat T.i.</a></li>
                         <li><a class="dropdown-item" href="semanal_jogos.php">⚽ Agenda de jogos</a></li>
                     </ul>
                 </li>

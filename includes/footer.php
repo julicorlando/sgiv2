@@ -61,7 +61,7 @@
 }
 #chat-ti-popup-iframe {
     width: 100%;
-    height: 400px;
+    height: 420px;
     border: none;
     background: #f7fafe;
 }
@@ -80,8 +80,7 @@
         Chat com o T.I.
         <button id="chat-ti-popup-close" title="Fechar">&times;</button>
     </div>
-    <!-- Substitua o src do iframe abaixo pelo link do seu chat real do T.I. -->
-    <iframe id="chat-ti-popup-iframe" src="https://seusite.com/chat-ti"></iframe>
+    <iframe id="chat-ti-popup-iframe" src="http://10.0.18.153/operacoes/chat_usuario.php"></iframe>
 </div>
 
 <script>
