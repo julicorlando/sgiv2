@@ -100,6 +100,22 @@ if (!isset($_SESSION['usuario_id'])) {
                         <li><a class="dropdown-item" href="implantar.php">⚙️ Configurações</a></li>
                     </ul>
                 </li>
+                <!-- Estacionamento Dropdown 
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="estacionamentoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        🚗 Estacionamento
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="estacionamentoDropdown">
+                         <li><a class="dropdown-item" href="estacionamento/form_perda_ticket.php">🎫 Perda de Ticket</a></li>
+                        <li><a class="dropdown-item" href="visualizar_ticket.php">🔎 Consultar Ocorrências</a></li>
+                        <li><a class="dropdown-item" href="estacionamento/cadastro_mensalista.php">📝 Cadastrar Credenciais</a></li>
+                        <li><a class="dropdown-item" href="listar_mensalistas.php">📋 Listar Credenciais</a></li>
+                        <li><a class="dropdown-item" href="estacionamento/cadastro_aluno.php">👨‍🎓 Cadastrar Aluno</a></li> 
+                        <li><a class="dropdown-item" href="lista_alunos.php">📚 Listar Alunos</a></li>
+                        <li><a class="dropdown-item" href="estacionamento/alterar_senha.php">🔑 Alterar Senha</a></li>
+                        <li><a class="dropdown-item" href="cadastrar_usuario.php">➕ Cadastrar Usuário</a></li>
+                    </ul>
+                </li> -->
             </ul>
             <span class="navbar-text me-3">
                 👋 Bem-vindo(a) <?= htmlspecialchars($_SESSION['usuario_nome']) ?>
