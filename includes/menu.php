@@ -47,7 +47,7 @@ if (!isset($_SESSION['usuario_id'])) {
                 <li class="nav-item">
                     <a href="index.php" class="nav-link">🏠 Início</a>
                 </li>
-                <!-- Inspeções Dropdown -->
+                <!-- Operações Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="inspecoesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         🛠️ Operações
@@ -61,6 +61,16 @@ if (!isset($_SESSION['usuario_id'])) {
                         <!--<li><a class="dropdown-item" href="historico_ponto.php">🌍 Histórico Mapa</a></li>-->
                         <li><a class="dropdown-item" href="upload_pdf.php">📄 Histórico CPRH</a></li>
                         <li><a class="dropdown-item" href="inventario.php">🏷️ Patrimônios</a></li>
+                    </ul>
+                </li>
+                <!-- Talentos Dropdown - NOVO -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="talentosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        🌟 Talentos
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="talentosDropdown">
+                        <li><a class="dropdown-item" href="talentos_upload.php">📤 Upload de Currículo</a></li>
+                        <li><a class="dropdown-item" href="talentos_visualizar.php">📁 Visualizar Currículos</a></li>
                     </ul>
                 </li>
                 <!-- Relatórios-->
