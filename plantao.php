@@ -20,20 +20,26 @@ $mensagem = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data_inicio = $_POST['data_inicio'];
     $data_fim = $_POST['data_fim'];
-    // Agora pega automaticamente
     $responsavel = $usuario_nome;
 
-    // Campos do formulário
+    // Campos do formulário em ordem!
     $campos = [
-        'banheiros_obs','banheiros_acao','cestos_obs','cestos_acao','praca_obs','praca_acao','mall_obs','mall_acao',
-        'corredores_obs','corredores_acao','externa_obs','externa_acao','seguranca_obs','seguranca_acao',
-        'manutencao_obs','manutencao_acao','marketing_obs','marketing_acao','ocorrencia_obs','ocorrencia_acao','ocorrencia_contato',
+        'banheiros_obs','banheiros_acao',
+        'cestos_obs','cestos_acao',
+        'praca_obs','praca_acao',
+        'mall_obs','mall_acao',
+        'corredores_obs','corredores_acao',
+        'externa_obs','externa_acao',
+        'seguranca_obs','seguranca_acao',
+        'manutencao_obs','manutencao_acao',
+        'marketing_obs','marketing_acao',
+        'ocorrencia_obs','ocorrencia_acao','ocorrencia_contato',
         'estacionamento_obs','estacionamento_acao'
     ];
 
     $valores = [];
     foreach ($campos as $c) {
-        $valores[$c] = isset($_POST[$c]) ? $_POST[$c] : '';
+        $valores[$c] = isset($_POST[$c]) ? $_POST[$c] : null;
     }
 
     $sql = "INSERT INTO plantao (
@@ -50,10 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ocorrencia_obs, ocorrencia_acao, ocorrencia_contato,
         estacionamento_obs, estacionamento_acao,
         usuario_id, data_criacao
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())";
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())";
+
     $stmt = $conn->prepare($sql);
     $stmt->bind_param(
-        "sssssssssssssssssssssssssssi",
+        "ssssssssssssssssssssssssssi",
         $data_inicio, $data_fim, $responsavel,
         $valores['banheiros_obs'], $valores['banheiros_acao'],
         $valores['cestos_obs'], $valores['cestos_acao'],
@@ -96,11 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="post" class="row g-3">
         <div class="col-md-3">
             <label class="form-label">Data de Início</label>
-            <input type="datetime-local" class="form-control" name="data_inicio" required>
+            <input type="date" class="form-control" name="data_inicio" required>
         </div>
         <div class="col-md-3">
             <label class="form-label">Data de Fim</label>
-            <input type="datetime-local" class="form-control" name="data_fim" required>
+            <input type="date" class="form-control" name="data_fim" required>
         </div>
         <div class="col-md-6">
             <label class="form-label">Responsável pelo Plantão</label>

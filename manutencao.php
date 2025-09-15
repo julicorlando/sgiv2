@@ -14,25 +14,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $anotacoes = $_POST['anotacoes'];
     $status = $_POST['status'];
     $usuario_id = $_SESSION['usuario_id'];
-    // Adicionado: captura o código do aparelho se for ar-condicionado
+    $data_programada = !empty($_POST['data_programada']) ? $_POST['data_programada'] : null;
     $codigo_aparelho = (isset($_POST['codigo_aparelho']) && $natureza == 'Ar-condicionado') ? trim($_POST['codigo_aparelho']) : null;
 
-    // Adapta o SQL para inserir o código do aparelho se houver
     if ($natureza == "Ar-condicionado") {
-        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, codigo_aparelho) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada, codigo_aparelho) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssssis", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $codigo_aparelho);
+        $stmt->bind_param("ssssssss", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada, $codigo_aparelho);
     } else {
-        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssssi", $natureza, $local, $acao, $anotacoes, $status, $usuario_id);
+        $stmt->bind_param("sssssis", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada);
     }
 
     if ($stmt->execute()) {
         $manutencao_id = $stmt->insert_id;
         $mensagem = '<div class="alert alert-success">Registro salvo com sucesso!</div>';
 
-        // 2. Salva os anexos (fotos) em uma tabela separada
+        // Fotos
         if (isset($_FILES['fotos']) && count($_FILES['fotos']['name']) > 0 && $_FILES['fotos']['name'][0] != "") {
             for ($i = 0; $i < count($_FILES['fotos']['name']); $i++) {
                 if ($_FILES['fotos']['error'][$i] === UPLOAD_ERR_OK) {
@@ -40,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $novo_nome = uniqid('manut_', true) . '.' . strtolower($ext);
                     $destino = 'uploads/' . $novo_nome;
                     if (move_uploaded_file($_FILES['fotos']['tmp_name'][$i], $destino)) {
-                        // Grava o caminho na tabela manutencao_fotos
                         $stmt_foto = $conn->prepare("INSERT INTO manutencao_fotos (manutencao_id, caminho) VALUES (?, ?)");
                         $stmt_foto->bind_param("is", $manutencao_id, $destino);
                         $stmt_foto->execute();
@@ -50,8 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 3. Exemplo de ação adicional: Você pode adicionar qualquer lógica aqui!
-        // Por exemplo, registrar um log da ação de manutenção:
+        // Log
         $log = "Manutenção registrada: $natureza em $local por usuário ID $usuario_id";
         $stmt_log = $conn->prepare("INSERT INTO manutencao_logs (manutencao_id, log, data) VALUES (?, ?, NOW())");
         $stmt_log->bind_param("is", $manutencao_id, $log);
@@ -72,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/bootstrap.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
-    // Mostra ou esconde o campo do código do aparelho conforme a seleção
     function toggleCodigoAparelho() {
         var natureza = document.getElementById('natureza').value;
         var divCodigo = document.getElementById('div-codigo-ar');
@@ -139,6 +135,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option>Pendente</option>
                 <option>Finalizado</option>
             </select>
+        </div>
+        <!-- NOVO CAMPO: Data Programada -->
+        <div class="mb-3">
+            <label class="form-label">Data Programada</label>
+            <input type="date" class="form-control" name="data_programada">
         </div>
         <div class="mb-3">
             <label class="form-label">Fotos (opcional, pode selecionar várias)</label>
