@@ -30,7 +30,7 @@ if ($mes_ano && preg_match('/^\d{2}\/\d{4}$/', $mes_ano)) {
 }
 
 // Consultas para manutenção e limpeza
-$sql_manut = "SELECT m.id, m.natureza, m.local, m.acao, m.anotacoes, m.status, m.foto, m.data_criacao, u.usuario as usuario_nome 
+$sql_manut = "SELECT m.id, m.natureza, m.local, m.acao, m.anotacoes, m.status, m.foto, m.data_criacao, m.data_programada, u.usuario as usuario_nome 
               FROM manutencao m 
               LEFT JOIN usuarios u ON m.usuario_id = u.id";
 if ($tipo == 'manutencao') {
@@ -107,8 +107,6 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             $assinaturas = glob("uploads/assinatura_*");
             $id_found = false;
             foreach ($assinaturas as $ass_path) {
-                // Tenta buscar assinatura pelo id ou por ordem de criação (ajuste conforme seu método de salvar)
-                // Aqui, como não temos o caminho salvo no banco, exibe a mais recente
                 if (!$id_found && file_exists($ass_path)) {
                     $assinatura_img = $ass_path;
                     $id_found = true;
@@ -180,237 +178,406 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
     </div>
 
     <?php if($mostrar && $info): ?>
+        <!-- Visualização detalhada -->
         <div class="card mb-4">
             <div class="card-header">
-                <b>Informações detalhadas</b>
+                <strong>Detalhes da <?= htmlspecialchars(ucfirst($origem)) ?></strong>
             </div>
-            <div class="card-body" id="print-section">
-                <?php if($origem == 'manutencao'): ?>
-                    <p><b>Natureza:</b> <?= htmlspecialchars($info['natureza']) ?></p>
-                    <p><b>Local/Equipamento:</b> <?= htmlspecialchars($info['local']) ?></p>
-                    <p><b>Ação:</b> <?= htmlspecialchars($info['acao']) ?></p>
-                    <p><b>Status:</b> <?= status_badge($info['status']) ?></p>
-                    <p><b>Anotações:</b> <br><?= nl2br(htmlspecialchars($info['anotacoes'])) ?></p>
-                    <?php if(!empty($info['foto'])): ?>
-                        <p><b>Foto:</b><br>
-                            <img src="<?= htmlspecialchars($info['foto']) ?>" class="modal-img" alt="Foto">
-                        </p>
+            <div class="card-body">
+                <table class="table">
+                    <?php if ($origem == 'manutencao'): ?>
+                        <tr>
+                            <th>Natureza</th>
+                            <td><?= htmlspecialchars($info['natureza']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Local</th>
+                            <td><?= htmlspecialchars($info['local']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Ação</th>
+                            <td><?= htmlspecialchars($info['acao']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td><?= status_badge($info['status']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Data de Criação</th>
+                            <td><?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Data Programada</th>
+                            <td>
+                                <?php if (!empty($info['data_programada'])): ?>
+                                    <?= date('d/m/Y', strtotime($info['data_programada'])) ?>
+                                <?php else: ?>
+                                    <em>Não programada</em>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Anotações</th>
+                            <td><?= nl2br(htmlspecialchars($info['anotacoes'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Solicitante</th>
+                            <td><?= htmlspecialchars($info['usuario_nome']) ?></td>
+                        </tr>
+                        <?php if (!empty($fotos_anexos)): ?>
+                        <tr>
+                            <th>Anexos</th>
+                            <td>
+                                <?php foreach ($fotos_anexos as $foto): ?>
+                                    <img src="<?= htmlspecialchars($foto) ?>" class="anexo-img" alt="Anexo">
+                                <?php endforeach; ?>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if ($assinatura_img): ?>
+                        <tr>
+                            <th>Assinatura</th>
+                            <td><img src="<?= htmlspecialchars($assinatura_img) ?>" class="assinatura-img" alt="Assinatura"></td>
+                        </tr>
+                        <?php endif; ?>
+                    <?php elseif ($origem == 'limpeza'): ?>
+                        <tr>
+                            <th>Local</th>
+                            <td><?= htmlspecialchars($info['local']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Ação</th>
+                            <td><?= htmlspecialchars($info['acao']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td><?= status_badge($info['status']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Data de Criação</th>
+                            <td><?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Anotações</th>
+                            <td><?= nl2br(htmlspecialchars($info['anotacoes'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Solicitante</th>
+                            <td><?= htmlspecialchars($info['usuario_nome']) ?></td>
+                        </tr>
+                        <?php if (!empty($fotos_anexos)): ?>
+                        <tr>
+                            <th>Anexos</th>
+                            <td>
+                                <?php foreach ($fotos_anexos as $foto): ?>
+                                    <img src="<?= htmlspecialchars($foto) ?>" class="anexo-img" alt="Anexo">
+                                <?php endforeach; ?>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
+                    <?php elseif ($origem == 'ti'): ?>
+                        <tr>
+                            <th>Título</th>
+                            <td><?= htmlspecialchars($info['titulo']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Descrição</th>
+                            <td><?= nl2br(htmlspecialchars($info['descricao'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td><?= status_badge($info['status']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Data de Criação</th>
+                            <td><?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Solicitante</th>
+                            <td><?= htmlspecialchars($info['usuario_nome']) ?></td>
+                        </tr>
                     <?php endif; ?>
-                    <?php if(count($fotos_anexos)): ?>
-                        <p><b>Anexos:</b><br>
-                            <?php foreach($fotos_anexos as $img): ?>
-                                <img src="<?= htmlspecialchars($img) ?>" class="anexo-img" alt="Anexo" onclick="showModal('<?= htmlspecialchars($img) ?>')">
-                            <?php endforeach; ?>
-                        </p>
-                    <?php endif; ?>
-                    <p><b>Data:</b> <?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></p>
-                    <p><b>Solicitado por:</b> <?= !empty($info['usuario_nome']) ? htmlspecialchars($info['usuario_nome']) : '<em>Desconhecido</em>' ?></p>
-                    <?php if(isset($info['natureza']) && mb_strtolower($info['natureza']) === 'ar-condicionado' && $assinatura_img && file_exists($assinatura_img)): ?>
-                        <p><b>Assinatura do responsável:</b><br>
-                            <img src="<?= htmlspecialchars($assinatura_img) ?>" class="assinatura-img" alt="Assinatura">
-                        </p>
-                    <?php endif; ?>
-                    <?php if($info['status'] == 'Finalizado'): ?>
-                        <div class="alert alert-success">Registro concluído. Não é possível editar.</div>
-                    <?php else: ?>
-                        <a href="editar.php?tipo=manutencao&id=<?= $info['id'] ?>" class="btn btn-warning">Editar</a>
-                    <?php endif; ?>
-                <?php elseif($origem == 'limpeza'): ?>
-                    <p><b>Local:</b> <?= htmlspecialchars($info['local']) ?></p>
-                    <p><b>Ação:</b> <?= htmlspecialchars($info['acao']) ?></p>
-                    <p><b>Status:</b> <?= status_badge($info['status']) ?></p>
-                    <p><b>Anotações:</b> <br><?= nl2br(htmlspecialchars($info['anotacoes'])) ?></p>
-                    <?php if(!empty($info['foto'])): ?>
-                        <p><b>Foto:</b><br>
-                            <img src="<?= htmlspecialchars($info['foto']) ?>" class="modal-img" alt="Foto">
-                        </p>
-                    <?php endif; ?>
-                    <?php if(count($fotos_anexos)): ?>
-                        <p><b>Anexos:</b><br>
-                            <?php foreach($fotos_anexos as $img): ?>
-                                <img src="<?= htmlspecialchars($img) ?>" class="anexo-img" alt="Anexo" onclick="showModal('<?= htmlspecialchars($img) ?>')">
-                            <?php endforeach; ?>
-                        </p>
-                    <?php endif; ?>
-                    <p><b>Data:</b> <?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></p>
-                    <p><b>Solicitado por:</b> <?= !empty($info['usuario_nome']) ? htmlspecialchars($info['usuario_nome']) : '<em>Desconhecido</em>' ?></p>
-                    <?php if($info['status'] == 'Finalizado'): ?>
-                        <div class="alert alert-success">Registro concluído. Não é possível editar.</div>
-                    <?php else: ?>
-                        <a href="editar.php?tipo=limpeza&id=<?= $info['id'] ?>" class="btn btn-warning">Editar</a>
-                    <?php endif; ?>
-                <?php elseif($origem == 'ti'): ?>
-                    <p><b>Título:</b> <?= htmlspecialchars($info['titulo']) ?></p>
-                    <p><b>Descrição:</b><br><?= nl2br(htmlspecialchars($info['descricao'])) ?></p>
-                    <p><b>Status:</b> <?= status_badge($info['status']) ?></p>
-                    <p><b>Data:</b> <?= date('d/m/Y H:i', strtotime($info['data_criacao'])) ?></p>
-                    <p><b>Solicitado por:</b> <?= !empty($info['usuario_nome']) ? htmlspecialchars($info['usuario_nome']) : '<em>Desconhecido</em>' ?></p>
-                    <?php if($info['status'] == 'Finalizado'): ?>
-                        <div class="alert alert-success">Registro concluído. Não é possível editar.</div>
-                    <?php else: ?>
-                        <a href="editar.php?tipo=ti&id=<?= $info['id'] ?>" class="btn btn-warning">Editar</a>
-                    <?php endif; ?>
-                <?php endif; ?>
-                <a href="historico.php?tipo=<?= $origem ?>" class="btn btn-secondary">Voltar</a>
-                <button onclick="printDetails()" class="btn btn-primary ms-2">Imprimir</button>
+                </table>
+                <a href="javascript:history.back()" class="btn btn-secondary">Voltar</a>
             </div>
         </div>
-        <div class="modal-backdrop-custom" id="imgModal" onclick="hideModal()">
-            <button class="modal-close-btn" onclick="hideModal(event)">&times;</button>
-            <img src="" id="modalImg" class="modal-img-large" alt="Anexo Ampliado">
-        </div>
-        <script>
-        function showModal(imgSrc) {
-            document.getElementById('modalImg').src = imgSrc;
-            document.getElementById('imgModal').classList.add('show');
-        }
-        function hideModal(e) {
-            if (e) e.stopPropagation();
-            document.getElementById('imgModal').classList.remove('show');
-            document.getElementById('modalImg').src = '';
-        }
-        function printDetails() {
-            var printContents = document.getElementById('print-section').innerHTML;
-            var originalContents = document.body.innerHTML;
-            document.body.innerHTML = printContents;
-            window.print();
-            document.body.innerHTML = originalContents;
-            location.reload();
-        }
-        </script>
     <?php endif; ?>
 
     <?php if(!$mostrar): ?>
 
         <!-- Manutenção -->
-        <?php if($sql_manut): 
+        <?php
+        $finalizados_manut = [];
+        $outros_manut = [];
+        if ($sql_manut) {
             $result = $conn->query($sql_manut . " ORDER BY data_criacao DESC");
-            if ($result && $result->num_rows > 0): ?>
-                <h5>Manutenção</h5>
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th>Natureza</th>
-                            <th>Local</th>
-                            <th>Anotações</th>
-                            <th>Status</th>
-                            <th>Data</th>
-                            <th>Foto</th>
-                            <th>Solicitante</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while($r = $result->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['natureza']) ?></td>
-                            <td><?= htmlspecialchars($r['local']) ?></td>
-                            <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
-                            <td><?= status_badge($r['status']) ?></td>
-                            <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
-                            <td>
-                                <?php if(!empty($r['foto'])): ?>
-                                    <img src="<?= htmlspecialchars($r['foto']) ?>" class="foto-thumb" alt="Foto">
-                                <?php endif; ?>
-                            </td>
-                            <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
-                            <td>
-                                <a href="?view=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
-                                <?php if($r['status'] != 'Finalizado'): ?>
-                                    <a href="editar.php?tipo=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>Nenhum registro de manutenção encontrado.</p>
-            <?php endif; ?>
+            if ($result && $result->num_rows > 0) {
+                while($r = $result->fetch_assoc()) {
+                    if ($r['status'] == 'Finalizado') {
+                        $finalizados_manut[] = $r;
+                    } else {
+                        $outros_manut[] = $r;
+                    }
+                }
+            }
+        }
+        ?>
+        <?php if (!empty($outros_manut)): ?>
+            <h5>Manutenção em andamento ou pendente</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Natureza</th>
+                        <th>Local</th>
+                        <th>Anotações</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Programado</th>
+                        <th>RESP.</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($outros_manut as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['natureza']) ?></td>
+                        <td><?= htmlspecialchars($r['local']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td>
+                            <?php if (!empty($r['data_programada'])): ?>
+                                <?= date('d/m/Y', strtotime($r['data_programada'])) ?>
+                            <?php else: ?>
+                                <em>-</em>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                            <?php if($r['status'] != 'Finalizado'): ?>
+                                <a href="editar.php?tipo=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <?php if (!empty($finalizados_manut)): ?>
+            <h5>Manutenção Finalizada</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Natureza</th>
+                        <th>Local</th>
+                        <th>Anotações</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Data Programada</th>
+                        <th>Foto</th>
+                        <th>Solicitante</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($finalizados_manut as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['natureza']) ?></td>
+                        <td><?= htmlspecialchars($r['local']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td>
+                            <?php if (!empty($r['data_programada'])): ?>
+                                <?= date('d/m/Y', strtotime($r['data_programada'])) ?>
+                            <?php else: ?>
+                                <em>-</em>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if(!empty($r['foto'])): ?>
+                                <img src="<?= htmlspecialchars($r['foto']) ?>" class="foto-thumb" alt="Foto">
+                            <?php endif; ?>
+                        </td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         <?php endif; ?>
 
         <!-- Limpeza -->
-        <?php if($sql_limp): 
+        <?php
+        $finalizados_limp = [];
+        $outros_limp = [];
+        if ($sql_limp) {
             $result = $conn->query($sql_limp . " ORDER BY data_criacao DESC");
-            if ($result && $result->num_rows > 0): ?>
-                <h5>Limpeza</h5>
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th>Local</th>
-                            <th>Anotações</th>
-                            <th>Status</th>
-                            <th>Data</th>
-                            <th>Foto</th>
-                            <th>Solicitante</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while($r = $result->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['local']) ?></td>
-                            <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
-                            <td><?= status_badge($r['status']) ?></td>
-                            <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
-                            <td>
-                                <?php if(!empty($r['foto'])): ?>
-                                    <img src="<?= htmlspecialchars($r['foto']) ?>" class="foto-thumb" alt="Foto">
-                                <?php endif; ?>
-                            </td>
-                            <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
-                            <td>
-                                <a href="?view=limpeza&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
-                                <?php if($r['status'] != 'Finalizado'): ?>
-                                    <a href="editar.php?tipo=limpeza&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>Nenhum registro de limpeza encontrado.</p>
-            <?php endif; ?>
+            if ($result && $result->num_rows > 0) {
+                while($r = $result->fetch_assoc()) {
+                    if ($r['status'] == 'Finalizado') {
+                        $finalizados_limp[] = $r;
+                    } else {
+                        $outros_limp[] = $r;
+                    }
+                }
+            }
+        }
+        ?>
+        <?php if (!empty($outros_limp)): ?>
+            <h5>Limpeza em andamento ou pendente</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Local</th>
+                        <th>Anotações</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Foto</th>
+                        <th>Solicitante</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($outros_limp as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['local']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td>
+                            <?php if(!empty($r['foto'])): ?>
+                                <img src="<?= htmlspecialchars($r['foto']) ?>" class="foto-thumb" alt="Foto">
+                            <?php endif; ?>
+                        </td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=limpeza&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                            <?php if($r['status'] != 'Finalizado'): ?>
+                                <a href="editar.php?tipo=limpeza&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <?php if (!empty($finalizados_limp)): ?>
+            <h5>Limpeza Finalizada</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Local</th>
+                        <th>Anotações</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Foto</th>
+                        <th>Solicitante</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($finalizados_limp as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['local']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['anotacoes'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td>
+                            <?php if(!empty($r['foto'])): ?>
+                                <img src="<?= htmlspecialchars($r['foto']) ?>" class="foto-thumb" alt="Foto">
+                            <?php endif; ?>
+                        </td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=limpeza&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         <?php endif; ?>
 
         <!-- TI -->
-        <?php if($sql_ti): 
+        <?php
+        $finalizados_ti = [];
+        $outros_ti = [];
+        if ($sql_ti) {
             $result = $conn->query($sql_ti . " ORDER BY data_criacao DESC");
-            if ($result && $result->num_rows > 0): ?>
-                <h5>Solicitações de TI</h5>
-                <table class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Descrição</th>
-                            <th>Status</th>
-                            <th>Data</th>
-                            <th>Solicitante</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while($r = $result->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($r['titulo']) ?></td>
-                            <td><?= nl2br(htmlspecialchars($r['descricao'])) ?></td>
-                            <td><?= status_badge($r['status']) ?></td>
-                            <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
-                            <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
-                            <td>
-                                <a href="?view=ti&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
-                                <?php if($r['status'] != 'Finalizado'): ?>
-                                    <a href="editar.php?tipo=ti&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <p>Nenhuma solicitação de TI encontrada.</p>
-            <?php endif; ?>
+            if ($result && $result->num_rows > 0) {
+                while($r = $result->fetch_assoc()) {
+                    if ($r['status'] == 'Finalizado') {
+                        $finalizados_ti[] = $r;
+                    } else {
+                        $outros_ti[] = $r;
+                    }
+                }
+            }
+        }
+        ?>
+        <?php if (!empty($outros_ti)): ?>
+            <h5>Solicitações de TI em andamento ou pendente</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Descrição</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Solicitante</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($outros_ti as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['titulo']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['descricao'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=ti&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                            <?php if($r['status'] != 'Finalizado'): ?>
+                                <a href="editar.php?tipo=ti&id=<?= $r['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <?php if (!empty($finalizados_ti)): ?>
+            <h5>Solicitações de TI Finalizadas</h5>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Descrição</th>
+                        <th>Status</th>
+                        <th>Data</th>
+                        <th>Solicitante</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach($finalizados_ti as $r): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($r['titulo']) ?></td>
+                        <td><?= nl2br(htmlspecialchars($r['descricao'])) ?></td>
+                        <td><?= status_badge($r['status']) ?></td>
+                        <td><?= date('d/m/Y H:i', strtotime($r['data_criacao'])) ?></td>
+                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td>
+                            <a href="?view=ti&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         <?php endif; ?>
 
     <?php endif; ?>
