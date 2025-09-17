@@ -17,9 +17,19 @@ function status_badge($status) {
     }
 }
 
-$tipo = isset($_GET['tipo']) ? $_GET['tipo'] : 'todos';
+// --- NOVO: processa mudança de responsável ---
+if (isset($_POST['novo_responsavel_id']) && isset($_POST['id_manutencao'])) {
+    $id_manut = intval($_POST['id_manutencao']);
+    $novo_resp = intval($_POST['novo_responsavel_id']);
+    $stmt = $conn->prepare("UPDATE manutencao SET funcionario_id=? WHERE id=?");
+    $stmt->bind_param("ii", $novo_resp, $id_manut);
+    $stmt->execute();
+    $stmt->close();
+    $msg = '<div class="alert alert-success">Responsável alterado com sucesso!</div>';
+}
 
 // FILTRO MM/AAAA
+$tipo = isset($_GET['tipo']) ? $_GET['tipo'] : 'todos';
 $mes_ano = isset($_GET['mes_ano']) ? $_GET['mes_ano'] : '';
 $where_data = '';
 if ($mes_ano && preg_match('/^\d{2}\/\d{4}$/', $mes_ano)) {
@@ -29,18 +39,29 @@ if ($mes_ano && preg_match('/^\d{2}\/\d{4}$/', $mes_ano)) {
     }
 }
 
+// --- NOVO: lista funcionários ativos para troca ---
+$funcionarios = [];
+$res_func = $conn->query("SELECT id, nome FROM usuarios WHERE tipo='funcionario' AND status='ativo'");
+while ($row = $res_func->fetch_assoc()) {
+    $funcionarios[] = $row;
+}
+
 // Consultas para manutenção e limpeza
-$sql_manut = "SELECT m.id, m.natureza, m.local, m.acao, m.anotacoes, m.status, m.foto, m.data_criacao, m.data_programada, u.usuario as usuario_nome 
-              FROM manutencao m 
-              LEFT JOIN usuarios u ON m.usuario_id = u.id";
+$sql_manut = "SELECT m.id, m.natureza, m.local, m.acao, m.anotacoes, m.status, m.foto, m.data_criacao, m.data_programada, u.usuario as usuario_nome, f.nome as responsavel_nome, m.funcionario_id
+              FROM manutencao m
+              LEFT JOIN usuarios u ON m.usuario_id = u.id
+              LEFT JOIN usuarios f ON m.funcionario_id = f.id";
 if ($tipo == 'manutencao') {
     $sql_manut .= " WHERE 1=1 $where_data";
 } elseif ($tipo == 'limpeza') {
     $sql_manut = false;
 }
 
-$sql_limp = "SELECT l.id, l.local, l.acao, l.anotacoes, l.status, l.foto, l.data_criacao, u.usuario as usuario_nome 
-             FROM limpeza l 
+// ... (restante igual ao seu código original, exceto para manutenção)
+// (para limpeza/ti, pode manter igual)
+
+$sql_limp = "SELECT l.id, l.local, l.acao, l.anotacoes, l.status, l.foto, l.data_criacao, u.usuario as usuario_nome
+             FROM limpeza l
              LEFT JOIN usuarios u ON l.usuario_id = u.id";
 if ($tipo == 'limpeza') {
     $sql_limp .= " WHERE 1=1 $where_data";
@@ -48,7 +69,6 @@ if ($tipo == 'limpeza') {
     $sql_limp = false;
 }
 
-// Consulta para TI
 $sql_ti = "SELECT s.id, s.titulo, s.descricao, s.status, s.data_criacao, u.usuario as usuario_nome
            FROM solicitacoes_ti s
            LEFT JOIN usuarios u ON s.usuario_id = u.id";
@@ -78,7 +98,11 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
     $origem = $_GET['view'];
 
     if ($origem == 'manutencao') {
-        $sqlv = "SELECT m.*, u.usuario as usuario_nome FROM manutencao m LEFT JOIN usuarios u ON m.usuario_id = u.id WHERE m.id = ?";
+        $sqlv = "SELECT m.*, u.usuario as usuario_nome, f.nome as responsavel_nome, m.funcionario_id
+                 FROM manutencao m
+                 LEFT JOIN usuarios u ON m.usuario_id = u.id
+                 LEFT JOIN usuarios f ON m.funcionario_id = f.id
+                 WHERE m.id = ?";
     } elseif ($origem == 'limpeza') {
         $sqlv = "SELECT l.*, u.usuario as usuario_nome FROM limpeza l LEFT JOIN usuarios u ON l.usuario_id = u.id WHERE l.id = ?";
     } elseif ($origem == 'ti') {
@@ -103,7 +127,6 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
 
         // Mostrar assinatura se natureza for ar-condicionado
         if (isset($info['natureza']) && mb_strtolower($info['natureza']) === 'ar-condicionado') {
-            // Procurar assinatura pelo padrão de nome
             $assinaturas = glob("uploads/assinatura_*");
             $id_found = false;
             foreach ($assinaturas as $ass_path) {
@@ -153,6 +176,7 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
 <?php include 'includes/menu.php'; ?>
 <div class="container mt-4">
     <h2>Histórico de Inspeções e Solicitações</h2>
+    <?php if(isset($msg)) echo $msg; ?>
     <form method="get" class="mb-3 row g-2">
         <div class="col-auto">
             <label for="mes_ano" class="col-form-label">Filtrar por MM/AAAA:</label>
@@ -223,6 +247,27 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                         <tr>
                             <th>Solicitante</th>
                             <td><?= htmlspecialchars($info['usuario_nome']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Responsável pelo serviço</th>
+                            <td>
+                                <?= !empty($info['responsavel_nome']) ? htmlspecialchars($info['responsavel_nome']) : '<em>Não atribuído</em>' ?>
+                                <!-- Form para troca de responsável -->
+                                <form method="post" class="row g-2 mt-2" style="max-width:300px;">
+                                    <input type="hidden" name="id_manutencao" value="<?= $info['id'] ?>">
+                                    <select name="novo_responsavel_id" class="form-select form-select-sm" required>
+                                        <option value="">Mudar responsável</option>
+                                        <?php foreach($funcionarios as $f): ?>
+                                            <option value="<?= $f['id'] ?>" <?= ($info['funcionario_id']==$f['id'])?'selected':'' ?>>
+                                                <?= htmlspecialchars($f['nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-sm btn-primary">Atualizar</button>
+                                    </div>
+                                </form>
+                            </td>
                         </tr>
                         <?php if (!empty($fotos_anexos)): ?>
                         <tr>
@@ -334,6 +379,7 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                         <th>Data</th>
                         <th>Programado</th>
                         <th>RESP.</th>
+                        <th>Mudar Responsável</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -352,7 +398,21 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                                 <em>-</em>
                             <?php endif; ?>
                         </td>
-                        <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td><?= !empty($r['responsavel_nome']) ? htmlspecialchars($r['responsavel_nome']) : '<em>Não atribuído</em>' ?></td>
+                        <td>
+                            <form method="post" style="width:140px;">
+                                <input type="hidden" name="id_manutencao" value="<?= $r['id'] ?>">
+                                <select name="novo_responsavel_id" class="form-select form-select-sm" required>
+                                    <option value="">Trocar</option>
+                                    <?php foreach($funcionarios as $f): ?>
+                                        <option value="<?= $f['id'] ?>" <?= ($r['funcionario_id']==$f['id'])?'selected':'' ?>>
+                                            <?= htmlspecialchars($f['nome']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary mt-1">Atualizar</button>
+                            </form>
+                        </td>
                         <td>
                             <a href="?view=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
                             <?php if($r['status'] != 'Finalizado'): ?>
@@ -377,6 +437,7 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                         <th>Data Programada</th>
                         <th>Foto</th>
                         <th>Solicitante</th>
+                        <th>Responsável</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -401,6 +462,7 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                             <?php endif; ?>
                         </td>
                         <td><?= !empty($r['usuario_nome']) ? htmlspecialchars($r['usuario_nome']) : '<em>Desconhecido</em>' ?></td>
+                        <td><?= !empty($r['responsavel_nome']) ? htmlspecialchars($r['responsavel_nome']) : '<em>Não atribuído</em>' ?></td>
                         <td>
                             <a href="?view=manutencao&id=<?= $r['id'] ?>" class="btn btn-sm btn-info">Ver</a>
                         </td>

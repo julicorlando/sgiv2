@@ -6,6 +6,13 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 include 'includes/db.php';
 
+// Busca funcionários ativos (mostra NOME, não usuário)
+$funcionarios = [];
+$res_func = $conn->query("SELECT id, nome FROM usuarios WHERE tipo='funcionario' AND status='ativo'");
+while ($row = $res_func->fetch_assoc()) {
+    $funcionarios[] = $row;
+}
+
 $mensagem = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $natureza = $_POST['natureza'];
@@ -17,14 +24,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data_programada = !empty($_POST['data_programada']) ? $_POST['data_programada'] : null;
     $codigo_aparelho = (isset($_POST['codigo_aparelho']) && $natureza == 'Ar-condicionado') ? trim($_POST['codigo_aparelho']) : null;
 
-    if ($natureza == "Ar-condicionado") {
-        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada, codigo_aparelho) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssssss", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada, $codigo_aparelho);
+    // Atribuição de funcionário (aleatório ou selecionado)
+    $funcionario_id = $_POST['funcionario_id'] ?? '';
+    if ($funcionario_id === 'ALEATORIO') {
+        $res = $conn->query("SELECT id FROM usuarios WHERE tipo='funcionario' AND status='ativo' ORDER BY RAND() LIMIT 1");
+        $linha = $res->fetch_assoc();
+        $funcionario_id = $linha ? $linha['id'] : null;
     } else {
-        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $funcionario_id = intval($funcionario_id);
+    }
+
+    if ($natureza == "Ar-condicionado") {
+        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada, codigo_aparelho, funcionario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssssis", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada);
+        $stmt->bind_param("ssssssssi", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada, $codigo_aparelho, $funcionario_id);
+    } else {
+        $sql = "INSERT INTO manutencao (natureza, local, acao, anotacoes, status, usuario_id, data_programada, funcionario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sssssssi", $natureza, $local, $acao, $anotacoes, $status, $usuario_id, $data_programada, $funcionario_id);
     }
 
     if ($stmt->execute()) {
@@ -96,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label class="form-label">Natureza</label>
             <select class="form-select" name="natureza" id="natureza" required>
                 <option value="">Selecione</option>
+                <option>Infra de Rede</option>
                 <option>Elétrica</option>
                 <option>Hidráulica</option>
                 <option>Predial</option>
@@ -116,11 +134,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label class="form-label">Ação</label>
             <select class="form-select" name="acao" required>
                 <option value="">Selecione</option>
+                <option>Implantar</option>
                 <option>Corrigir</option>
                 <option>Substituir</option>
                 <option>Limpar</option>
                 <option>Pintar</option>
                 <option>Outros</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Funcionário Responsável</label>
+            <select class="form-select" name="funcionario_id" required>
+                <option value="">Selecione</option>
+                <option value="ALEATORIO">Atribuir aleatoriamente</option>
+                <?php foreach ($funcionarios as $f): ?>
+                    <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nome']) ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <div class="mb-3">
@@ -136,7 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option>Finalizado</option>
             </select>
         </div>
-        <!-- NOVO CAMPO: Data Programada -->
         <div class="mb-3">
             <label class="form-label">Data Programada</label>
             <input type="date" class="form-control" name="data_programada">
