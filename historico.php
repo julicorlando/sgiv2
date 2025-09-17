@@ -6,6 +6,7 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 
 include 'includes/db.php';
+include 'includes/logger.php';
 
 function status_badge($status) {
     switch($status) {
@@ -21,10 +22,26 @@ function status_badge($status) {
 if (isset($_POST['novo_responsavel_id']) && isset($_POST['id_manutencao'])) {
     $id_manut = intval($_POST['id_manutencao']);
     $novo_resp = intval($_POST['novo_responsavel_id']);
+    
+    // Buscar responsável anterior para log
+    $stmt_anterior = $conn->prepare("SELECT funcionario_id FROM manutencao WHERE id = ?");
+    $stmt_anterior->bind_param("i", $id_manut);
+    $stmt_anterior->execute();
+    $stmt_anterior->bind_result($responsavel_anterior);
+    $stmt_anterior->fetch();
+    $stmt_anterior->close();
+    
+    // Atualizar responsável
     $stmt = $conn->prepare("UPDATE manutencao SET funcionario_id=? WHERE id=?");
     $stmt->bind_param("ii", $novo_resp, $id_manut);
     $stmt->execute();
     $stmt->close();
+    
+    // Log da alteração
+    $valor_anterior = get_user_name_by_id($conn, $responsavel_anterior);
+    $valor_novo = get_user_name_by_id($conn, $novo_resp);
+    log_change($conn, $_SESSION['usuario_id'], 'manutencao', $id_manut, 'responsavel', $valor_anterior, $valor_novo);
+    
     $msg = '<div class="alert alert-success">Responsável alterado com sucesso!</div>';
 }
 
@@ -39,6 +56,11 @@ if ($mes_ano && preg_match('/^\d{2}\/\d{4}$/', $mes_ano)) {
     }
 }
 
+// Pagination
+$items_per_page = 20;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$offset = ($page - 1) * $items_per_page;
+
 // --- NOVO: lista funcionários ativos para troca ---
 $funcionarios = [];
 $res_func = $conn->query("SELECT id, nome FROM usuarios WHERE tipo='funcionario' AND status='ativo'");
@@ -51,38 +73,82 @@ $sql_manut = "SELECT m.id, m.natureza, m.local, m.acao, m.anotacoes, m.status, m
               FROM manutencao m
               LEFT JOIN usuarios u ON m.usuario_id = u.id
               LEFT JOIN usuarios f ON m.funcionario_id = f.id";
+$sql_manut_count = "SELECT COUNT(*) as total FROM manutencao m LEFT JOIN usuarios u ON m.usuario_id = u.id LEFT JOIN usuarios f ON m.funcionario_id = f.id";
+
 if ($tipo == 'manutencao') {
     $sql_manut .= " WHERE 1=1 $where_data";
+    $sql_manut_count .= " WHERE 1=1 $where_data";
 } elseif ($tipo == 'limpeza') {
     $sql_manut = false;
+    $sql_manut_count = false;
 }
-
-// ... (restante igual ao seu código original, exceto para manutenção)
-// (para limpeza/ti, pode manter igual)
 
 $sql_limp = "SELECT l.id, l.local, l.acao, l.anotacoes, l.status, l.foto, l.data_criacao, u.usuario as usuario_nome
              FROM limpeza l
              LEFT JOIN usuarios u ON l.usuario_id = u.id";
+$sql_limp_count = "SELECT COUNT(*) as total FROM limpeza l LEFT JOIN usuarios u ON l.usuario_id = u.id";
+
 if ($tipo == 'limpeza') {
     $sql_limp .= " WHERE 1=1 $where_data";
+    $sql_limp_count .= " WHERE 1=1 $where_data";
 } elseif ($tipo == 'manutencao') {
     $sql_limp = false;
+    $sql_limp_count = false;
 }
 
 $sql_ti = "SELECT s.id, s.titulo, s.descricao, s.status, s.data_criacao, u.usuario as usuario_nome
            FROM solicitacoes_ti s
            LEFT JOIN usuarios u ON s.usuario_id = u.id";
+$sql_ti_count = "SELECT COUNT(*) as total FROM solicitacoes_ti s LEFT JOIN usuarios u ON s.usuario_id = u.id";
+
 if ($tipo == 'ti') {
     $sql_manut = false;
+    $sql_manut_count = false;
     $sql_limp = false;
+    $sql_limp_count = false;
     $sql_ti .= " WHERE 1=1 $where_data";
+    $sql_ti_count .= " WHERE 1=1 $where_data";
 } elseif ($tipo != 'todos') {
     $sql_ti = false;
+    $sql_ti_count = false;
 }
+
 if ($tipo == 'todos' && $where_data) {
     $sql_manut .= " WHERE 1=1 $where_data";
+    $sql_manut_count .= " WHERE 1=1 $where_data";
     $sql_limp .= " WHERE 1=1 $where_data";
+    $sql_limp_count .= " WHERE 1=1 $where_data";
     $sql_ti .= " WHERE 1=1 $where_data";
+    $sql_ti_count .= " WHERE 1=1 $where_data";
+}
+
+// Function to create pagination links
+function create_pagination_links($current_page, $total_pages, $base_url) {
+    $links = [];
+    
+    if ($current_page > 1) {
+        $links[] = '<li class="page-item"><a class="page-link" href="' . $base_url . '&page=' . ($current_page - 1) . '">Anterior</a></li>';
+    }
+    
+    $start_page = max(1, $current_page - 2);
+    $end_page = min($total_pages, $current_page + 2);
+    
+    for ($i = $start_page; $i <= $end_page; $i++) {
+        $active = $i == $current_page ? ' active' : '';
+        $links[] = '<li class="page-item' . $active . '"><a class="page-link" href="' . $base_url . '&page=' . $i . '">' . $i . '</a></li>';
+    }
+    
+    if ($current_page < $total_pages) {
+        $links[] = '<li class="page-item"><a class="page-link" href="' . $base_url . '&page=' . ($current_page + 1) . '">Próxima</a></li>';
+    }
+    
+    return implode('', $links);
+}
+
+// Build URL for pagination
+$base_url = '?tipo=' . urlencode($tipo);
+if ($mes_ano) {
+    $base_url .= '&mes_ano=' . urlencode($mes_ano);
 }
 
 // Visualização de um registro específico
@@ -170,6 +236,8 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
         .modal-backdrop-custom.show { display: flex; }
         .modal-img-large { max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 0 20px #222; background: #fff; padding: 8px; }
         .modal-close-btn { position: absolute; top: 24px; right: 36px; font-size: 2.2rem; color: #fff; background: none; border: none; font-weight: bold; cursor: pointer; z-index: 1100; }
+        .pagination-container { text-align: center; margin: 20px 0; }
+        .section-separator { border-top: 2px solid #dee2e6; margin: 40px 0 30px 0; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -354,8 +422,15 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
         <?php
         $finalizados_manut = [];
         $outros_manut = [];
+        $total_manut = 0;
+        $total_pages_manut = 0;
+        
         if ($sql_manut) {
-            $result = $conn->query($sql_manut . " ORDER BY data_criacao DESC");
+            // Get total count
+            $total_manut = $conn->query($sql_manut_count)->fetch_assoc()['total'];
+            $total_pages_manut = ceil($total_manut / $items_per_page);
+            
+            $result = $conn->query($sql_manut . " ORDER BY data_criacao DESC LIMIT $items_per_page OFFSET $offset");
             if ($result && $result->num_rows > 0) {
                 while($r = $result->fetch_assoc()) {
                     if ($r['status'] == 'Finalizado') {
@@ -367,8 +442,18 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             }
         }
         ?>
+        
+        <?php if (!empty($outros_manut) || !empty($finalizados_manut)): ?>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Manutenção (<?= $total_manut ?> registros)</h5>
+                <?php if ($total_pages_manut > 1): ?>
+                    <small class="text-muted">Página <?= $page ?> de <?= $total_pages_manut ?></small>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        
         <?php if (!empty($outros_manut)): ?>
-            <h5>Manutenção em andamento ou pendente</h5>
+            <h6 class="text-warning">Em andamento ou pendente</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -424,8 +509,9 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                 </tbody>
             </table>
         <?php endif; ?>
+        
         <?php if (!empty($finalizados_manut)): ?>
-            <h5>Manutenção Finalizada</h5>
+            <h6 class="text-success">Finalizada</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -472,12 +558,28 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             </table>
         <?php endif; ?>
 
+        <!-- Pagination for Manutenção -->
+        <?php if ($sql_manut && $total_pages_manut > 1): ?>
+            <nav class="pagination-container">
+                <ul class="pagination justify-content-center">
+                    <?= create_pagination_links($page, $total_pages_manut, $base_url) ?>
+                </ul>
+            </nav>
+        <?php endif; ?>
+
         <!-- Limpeza -->
         <?php
         $finalizados_limp = [];
         $outros_limp = [];
+        $total_limp = 0;
+        $total_pages_limp = 0;
+        
         if ($sql_limp) {
-            $result = $conn->query($sql_limp . " ORDER BY data_criacao DESC");
+            // Get total count
+            $total_limp = $conn->query($sql_limp_count)->fetch_assoc()['total'];
+            $total_pages_limp = ceil($total_limp / $items_per_page);
+            
+            $result = $conn->query($sql_limp . " ORDER BY data_criacao DESC LIMIT $items_per_page OFFSET $offset");
             if ($result && $result->num_rows > 0) {
                 while($r = $result->fetch_assoc()) {
                     if ($r['status'] == 'Finalizado') {
@@ -489,8 +591,20 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             }
         }
         ?>
+        
+        <?php if (!empty($outros_limp) || !empty($finalizados_limp)): ?>
+            <div class="section-separator">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Limpeza (<?= $total_limp ?> registros)</h5>
+                    <?php if ($total_pages_limp > 1): ?>
+                        <small class="text-muted">Página <?= $page ?> de <?= $total_pages_limp ?></small>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
         <?php if (!empty($outros_limp)): ?>
-            <h5>Limpeza em andamento ou pendente</h5>
+            <h6 class="text-warning">Em andamento ou pendente</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -527,8 +641,9 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                 </tbody>
             </table>
         <?php endif; ?>
+        
         <?php if (!empty($finalizados_limp)): ?>
-            <h5>Limpeza Finalizada</h5>
+            <h6 class="text-success">Finalizada</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -563,12 +678,28 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             </table>
         <?php endif; ?>
 
+        <!-- Pagination for Limpeza -->
+        <?php if ($sql_limp && $total_pages_limp > 1): ?>
+            <nav class="pagination-container">
+                <ul class="pagination justify-content-center">
+                    <?= create_pagination_links($page, $total_pages_limp, $base_url) ?>
+                </ul>
+            </nav>
+        <?php endif; ?>
+
         <!-- TI -->
         <?php
         $finalizados_ti = [];
         $outros_ti = [];
+        $total_ti = 0;
+        $total_pages_ti = 0;
+        
         if ($sql_ti) {
-            $result = $conn->query($sql_ti . " ORDER BY data_criacao DESC");
+            // Get total count
+            $total_ti = $conn->query($sql_ti_count)->fetch_assoc()['total'];
+            $total_pages_ti = ceil($total_ti / $items_per_page);
+            
+            $result = $conn->query($sql_ti . " ORDER BY data_criacao DESC LIMIT $items_per_page OFFSET $offset");
             if ($result && $result->num_rows > 0) {
                 while($r = $result->fetch_assoc()) {
                     if ($r['status'] == 'Finalizado') {
@@ -580,8 +711,20 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
             }
         }
         ?>
+        
+        <?php if (!empty($outros_ti) || !empty($finalizados_ti)): ?>
+            <div class="section-separator">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Solicitações de TI (<?= $total_ti ?> registros)</h5>
+                    <?php if ($total_pages_ti > 1): ?>
+                        <small class="text-muted">Página <?= $page ?> de <?= $total_pages_ti ?></small>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
         <?php if (!empty($outros_ti)): ?>
-            <h5>Solicitações de TI em andamento ou pendente</h5>
+            <h6 class="text-warning">Em andamento ou pendente</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -612,8 +755,9 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                 </tbody>
             </table>
         <?php endif; ?>
+        
         <?php if (!empty($finalizados_ti)): ?>
-            <h5>Solicitações de TI Finalizadas</h5>
+            <h6 class="text-success">Finalizadas</h6>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -640,6 +784,15 @@ if (isset($_GET['view']) && isset($_GET['id'])) {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+        <?php endif; ?>
+
+        <!-- Pagination for TI -->
+        <?php if ($sql_ti && $total_pages_ti > 1): ?>
+            <nav class="pagination-container">
+                <ul class="pagination justify-content-center">
+                    <?= create_pagination_links($page, $total_pages_ti, $base_url) ?>
+                </ul>
+            </nav>
         <?php endif; ?>
 
     <?php endif; ?>

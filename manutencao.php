@@ -5,6 +5,7 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 include 'includes/db.php';
+include 'includes/logger.php';
 
 // Busca funcionários ativos (mostra NOME, não usuário)
 $funcionarios = [];
