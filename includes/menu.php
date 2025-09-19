@@ -93,6 +93,20 @@ if (isset($_SESSION['usuario_id'])) {
                             <li><a class="dropdown-item" href="inventario.php">🏷️ Patrimônios</a></li>
                         </ul>
                     </li>
+                    <!-- Almoxarifado Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="almoxarifadoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            🏪 Almoxarifado
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="almoxarifadoDropdown">
+                            <?php if ($tipo_usuario === 'administrador' || $tipo_usuario === 'admin'): ?>
+                                <li><a class="dropdown-item" href="estoque_produtos.php">📦 Gestão de Produtos</a></li>
+                                <li><a class="dropdown-item" href="estoque_relatorios.php">📊 Relatórios e Auditoria</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            <?php endif; ?>
+                            <li><a class="dropdown-item" href="estoque_saida.php">📤 Retirada de Produtos</a></li>
+                        </ul>
+                    </li>
                     <!-- Chamados Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="chamadosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
